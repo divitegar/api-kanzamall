@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import cors from "cors";
 import fs from "fs";
@@ -38,6 +39,23 @@ import wishlistRoutes from "./src/backend/routes/wishlistRoutes.js";
 async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
+
+  // Resolve project root safely for both tsx dev run and compiled dist-server run.
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const rootCandidates = [process.cwd(), moduleDir, path.resolve(moduleDir, "..")];
+  const resolveExistingDir = (relativeDir: string): string | null => {
+    for (const base of rootCandidates) {
+      const candidate = path.join(base, relativeDir);
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
+        return candidate;
+      }
+    }
+    return null;
+  };
+
+  const imagesRoot = resolveExistingDir(path.join("src", "images"))
+    || resolveExistingDir("images")
+    || path.join(process.cwd(), "src", "images");
 
   app.use(cors({
     origin: (origin, callback) => {
@@ -118,10 +136,12 @@ async function startServer() {
   app.use("/api", wishlistRoutes);
 
   // Static images (legacy-friendly)
-  app.use('/images', express.static(path.join(process.cwd(), 'src', 'images')));
-  app.use('/slideshow', express.static(path.join(process.cwd(), 'src', 'images', 'slideshow')));
-  app.use('/produk', express.static(path.join(process.cwd(), 'src', 'images', 'produk')));
-  app.use('/banner', express.static(path.join(process.cwd(), 'src', 'images', 'banner')));
+  app.use('/images', express.static(imagesRoot));
+  app.use('/slideshow', express.static(path.join(imagesRoot, 'slideshow')));
+  app.use('/produk', express.static(path.join(imagesRoot, 'produk')));
+  app.use('/banner', express.static(path.join(imagesRoot, 'banner')));
+
+  console.log(`Static images root: ${imagesRoot}`);
 
   // Debug: list registered routes (including mounted routers)
   app.get('/api/routes', (req, res) => {
