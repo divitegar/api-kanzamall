@@ -174,22 +174,29 @@ export const getBestSellingProducts = async (req: AuthRequest, res: Response) =>
   const limit = Number(req.query.limit) || 10;
 
   try {
-    // First, aggregate top product ids from completed orders (order_status_id = 7)
+    // Aggregate top product ids from completed orders (order_status_id = 7)
+    // but only consider products that are active (status = 1 and trash = 0)
     const topQuery = `
       SELECT op.product_id, SUM(op.quantity) AS total_qty
       FROM sw_order_product op
-      JOIN sw_order o ON o.order_id = op.order_id AND o.order_status_id = 7
+      JOIN sw_order o ON o.order_id = op.order_id
+      JOIN sw_product p ON p.product_id = op.product_id
+      WHERE o.order_status_id = 7 AND p.status = 1 AND p.trash = 0
       GROUP BY op.product_id
       ORDER BY total_qty DESC
       LIMIT ?
     `;
 
     const [topRows]: any = await pool.query(topQuery, [limit]);
+
     if (!topRows || topRows.length === 0) {
       return successResponse(res, { products: [] }, 'Best selling products retrieved successfully');
     }
 
-    // Use the aggregated list as a derived table to join product details
+    const productIds: number[] = topRows.map((r: any) => Number(r.product_id));
+    const placeholders = productIds.map(() => '?').join(',');
+
+    // Fetch product details for these product IDs, only active (trash=0,status=1)
     const query = `
       SELECT 
         pd.name, pd.description, pd.tag, pd.meta_title, pd.meta_description, pd.meta_keyword,
@@ -198,29 +205,44 @@ export const getBestSellingProducts = async (req: AuthRequest, res: Response) =>
         wcd.title as berat,
         cd.name as category_name,
         (p.weight / wc.value) as nilai_berat,
-        p.*,
-        tp.total_qty
-      FROM (
-        SELECT op.product_id, SUM(op.quantity) AS total_qty
-        FROM sw_order_product op
-        JOIN sw_order o ON o.order_id = op.order_id AND o.order_status_id = 7
-        GROUP BY op.product_id
-        ORDER BY total_qty DESC
-        LIMIT ?
-      ) tp
-      JOIN sw_product p ON p.product_id = tp.product_id
+        p.*
+      FROM sw_product p
       LEFT JOIN sw_product_description pd ON pd.product_id = p.product_id
       LEFT JOIN sw_stock_status ss ON ss.stock_status_id = p.stock_status_id
       LEFT JOIN sw_manufacturer m ON m.manufacturer_id = p.manufacturer_id
       LEFT JOIN sw_weight_class_description wcd ON wcd.weight_class_id = p.weight_class_id
       LEFT JOIN sw_weight_class wc ON wc.weight_class_id = p.weight_class_id
       LEFT JOIN sw_category_description cd ON cd.category_id = p.category_id
-      WHERE p.trash = '0' AND p.status = 1
-      ORDER BY tp.total_qty DESC
+      WHERE p.product_id IN (${placeholders})
+        AND p.trash = '0' AND p.status = 1
+      ORDER BY FIELD(p.product_id, ${placeholders})
     `;
 
-    const [rows]: any = await pool.query(query, [limit]);
-    return successResponse(res, { products: rows }, 'Best selling products retrieved successfully');
+    const params = [...productIds, ...productIds];
+    const [rows]: any = await pool.query(query, params);
+
+    // Map total_qty by product_id
+    const qtyMap = new Map<number, number>();
+    topRows.forEach((r: any) => qtyMap.set(Number(r.product_id), Number(r.total_qty)));
+
+    // Normalize image and attach total_qty
+    const host = req.get('host') || 'localhost:3000';
+    const protocol = req.protocol || 'http';
+    const baseUrl = `${protocol}://${host}`;
+    const normalizeImage = (img: string | null | undefined) => {
+      if (!img) return null;
+      if (img.startsWith('http://') || img.startsWith('https://')) return img;
+      const filename = img.replace(/^\/+/, '');
+      return `${baseUrl}/images/${encodeURI(filename)}`;
+    };
+
+    const products = (rows || []).map((p: any) => ({
+      ...p,
+      total_qty: qtyMap.get(Number(p.product_id)) || 0,
+      image_url: normalizeImage(p.image)
+    }));
+
+    return successResponse(res, { products }, 'Best selling products retrieved successfully');
   } catch (error: any) {
     return errorResponse(res, error.message, 500);
   }
