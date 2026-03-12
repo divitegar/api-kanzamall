@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development tsx server.ts",
-    "build": "vite build && tsc -p tsconfig.server.json",
-    "build:server": "tsc -p tsconfig.server.json",
+    "build": "vite build && tsc -p tsconfig.server.json && mkdir -p dist-server/src && rm -rf dist-server/src/images && cp -R src/images dist-server/src/images",
+    "build:server": "tsc -p tsconfig.server.json && mkdir -p dist-server/src && rm -rf dist-server/src/images && cp -R src/images dist-server/src/images",
     "start": "NODE_ENV=production node dist-server/server.js",
     "start:prod": "NODE_ENV=production node dist-server/server.js",
     "preview": "vite preview",
