@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { getOrders, getOrderProducts, saveOrder, updateOrder, updateOrderHistori, saveTest, mutasiStok } from '../controllers/orderController.js';
+const router = Router();
+router.get('/orders', getOrders);
+router.get('/orders/:order_id', getOrders);
+router.get('/orders/:order_id/products', getOrderProducts);
+router.post('/orders', saveOrder);
+router.put('/orders/:order_id', updateOrder);
+router.put('/orders/:order_id/history', updateOrderHistori);
+router.post('/orders/test', saveTest);
+router.post('/orders/:order_id/mutasi', mutasiStok);
+export default router;

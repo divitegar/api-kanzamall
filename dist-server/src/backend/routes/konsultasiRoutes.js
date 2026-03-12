@@ -1,0 +1,18 @@
+import { Router } from 'express';
+import { getKategoriKonsultasi, getJmlKonsultasiKategori, getJmlKonsultasiBaru, isKonsultasiOpen, getKonsultasi, getJmlAntrian, getAntrian, jawabAntrian, getDataKonsul, getChatKonsul, insertKonsul, updateKonsul, insertChatMessage, updateChatMessageStatus } from '../controllers/konsultasiController.js';
+const router = Router();
+router.get('/konsultasi/categories', getKategoriKonsultasi);
+router.get('/konsultasi/categories/counts', getJmlKonsultasiKategori);
+router.get('/konsultasi/new-count', getJmlKonsultasiBaru);
+router.get('/konsultasi/open/:user_id', isKonsultasiOpen);
+router.get('/konsultasi', getKonsultasi);
+router.get('/konsultasi/antrian/count', getJmlAntrian);
+router.get('/konsultasi/antrian', getAntrian);
+router.post('/konsultasi/antrian/answer/:id', jawabAntrian);
+router.get('/konsultasi/:konsul_id', getDataKonsul);
+router.get('/konsultasi/:id/chat', getChatKonsul);
+router.post('/konsultasi', insertKonsul);
+router.put('/konsultasi/:konsul_id', updateKonsul);
+router.post('/konsultasi/chat', insertChatMessage);
+router.patch('/konsultasi/chat/status', updateChatMessageStatus);
+export default router;
