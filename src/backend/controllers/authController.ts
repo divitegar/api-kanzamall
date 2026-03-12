@@ -221,3 +221,32 @@ export const customerRegister = async (req: Request, res: Response) => {
     return errorResponse(res, error.message, 500);
   }
 };
+
+export const getCustomerById = async (req: Request, res: Response) => {
+  const customer_id = String(req.params.customer_id ?? req.params.id ?? req.query.customer_id ?? '').trim();
+
+  if (!customer_id) {
+    return errorResponse(res, 'customer_id is required', 400);
+  }
+
+  try {
+    const query = `
+      SELECT c.*, mw.name as wilayah_store
+      FROM sw_customer c
+      LEFT JOIN sw_store s ON c.store_id = s.store_id
+      LEFT JOIN sw_mst_wilayah mw ON s.mst_wilayah_id = mw.mst_wilayah_id
+      WHERE c.customer_id = ?
+      LIMIT 1
+    `;
+
+    const [rows]: any = await pool.query(query, [customer_id]);
+
+    if (!rows || rows.length === 0) {
+      return errorResponse(res, 'Customer not found', 404);
+    }
+
+    return successResponse(res, { customer: rows[0] }, 'Customer retrieved successfully');
+  } catch (error: any) {
+    return errorResponse(res, error.message, 500);
+  }
+};

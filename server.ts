@@ -12,7 +12,29 @@ import productRoutes from "./src/backend/routes/productRoutes.js";
 import slideshowRoutes from "./src/backend/routes/slideshowRoutes.js";
 import storeRoutes from "./src/backend/routes/storeRoutes.js";
 import articleRoutes from "./src/backend/routes/articleRoutes.js";
+import rewardRoutes from "./src/backend/routes/rewardRoutes.js";
+import aboutUsRoutes from "./src/backend/routes/aboutUsRoutes.js";
+import addressRoutes from "./src/backend/routes/addressRoutes.js";
+import categoryRoutes from "./src/backend/routes/categoryRoutes.js";
+import inventoriOrderRoutes from "./src/backend/routes/inventoriOrderRoutes.js";
+import itemRoutes from "./src/backend/routes/itemRoutes.js";
+import komisiRoutes from "./src/backend/routes/komisiRoutes.js";
+import konsultasiRoutes from "./src/backend/routes/konsultasiRoutes.js";
+import masterWilayahRoutes from "./src/backend/routes/masterWilayahRoutes.js";
+import midtransRoutes from "./src/backend/routes/midtransRoutes.js";
+import ongkirRoutes from "./src/backend/routes/ongkirRoutes.js";
+import orderProductRoutes from "./src/backend/routes/orderProductRoutes.js";
+import orderRoutes from "./src/backend/routes/orderRoutes.js";
+import privacyRoutes from "./src/backend/routes/privacyRoutes.js";
+import productOptionRoutes from "./src/backend/routes/productOptionRoutes.js";
+import productRelatedRoutes from "./src/backend/routes/productRelatedRoutes.js";
+import reviewRoutes from "./src/backend/routes/reviewRoutes.js";
 import pool from "./src/backend/config/db.js";
+import stockRoutes from "./src/backend/routes/stockRoutes.js";
+import termsConditionRoutes from "./src/backend/routes/termsConditionRoutes.js";
+import testimonyRoutes from "./src/backend/routes/testimonyRoutes.js";
+import tutorialRoutes from "./src/backend/routes/tutorialRoutes.js";
+import wishlistRoutes from "./src/backend/routes/wishlistRoutes.js";
 
 async function startServer() {
   const app = express();
@@ -73,6 +95,28 @@ async function startServer() {
   app.use("/api/slideshow", slideshowRoutes);
   app.use("/api/stores", storeRoutes);
   app.use("/api/articles", articleRoutes);
+  app.use("/api/items", itemRoutes);
+  app.use("/api", aboutUsRoutes);
+  app.use("/api", addressRoutes);
+  app.use("/api", categoryRoutes);
+  app.use("/api", inventoriOrderRoutes);
+  app.use("/api", komisiRoutes);
+  app.use("/api", konsultasiRoutes);
+  app.use("/api", masterWilayahRoutes);
+  app.use("/api", midtransRoutes);
+  app.use("/api", ongkirRoutes);
+  app.use("/api", orderProductRoutes);
+  app.use("/api", orderRoutes);
+  app.use("/api", privacyRoutes);
+  app.use("/api", productOptionRoutes);
+  app.use("/api", productRelatedRoutes);
+  app.use("/api", reviewRoutes);
+  app.use("/api", rewardRoutes);
+  app.use("/api", stockRoutes);
+  app.use("/api", termsConditionRoutes);
+  app.use("/api", testimonyRoutes);
+  app.use("/api", tutorialRoutes);
+  app.use("/api", wishlistRoutes);
 
   // Static images (legacy-friendly)
   app.use('/images', express.static(path.join(process.cwd(), 'src', 'images')));

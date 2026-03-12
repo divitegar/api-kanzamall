@@ -15,6 +15,16 @@ export const getProducts = async (req: AuthRequest, res: Response) => {
   const { product_id, category_id, jenis, limit = 8 } = req.query;
   
   try {
+    // Detail access: bump product view counter when product_id is explicitly requested.
+    if (product_id) {
+      await pool.query(
+        `UPDATE sw_product
+         SET viewed = COALESCE(viewed, 0) + 1
+         WHERE product_id = ? AND status = 1 AND trash = 0`,
+        [product_id]
+      );
+    }
+
     let query = `
       SELECT 
         pd.name, pd.description, pd.tag, pd.meta_title, pd.meta_description, pd.meta_keyword,
@@ -22,6 +32,7 @@ export const getProducts = async (req: AuthRequest, res: Response) => {
         m.name as brand,
         wcd.title as berat,
         cd.name as category_name,
+        COALESCE(sales.total_qty, 0) as total_qty,
         (p.weight / wc.value) as nilai_berat,
         p.*
       FROM sw_product p
@@ -31,21 +42,26 @@ export const getProducts = async (req: AuthRequest, res: Response) => {
       LEFT JOIN sw_weight_class_description wcd ON wcd.weight_class_id = p.weight_class_id
       LEFT JOIN sw_weight_class wc ON wc.weight_class_id = p.weight_class_id
       LEFT JOIN sw_category_description cd ON cd.category_id = p.category_id
+      LEFT JOIN (
+        SELECT op.product_id, SUM(op.quantity) AS total_qty
+        FROM sw_order_product op
+        JOIN sw_order o ON o.order_id = op.order_id
+        JOIN sw_product p2 ON p2.product_id = op.product_id
+        WHERE o.order_status_id = 7 AND p2.status = 1 AND p2.trash = 0
+        GROUP BY op.product_id
+      ) sales ON sales.product_id = p.product_id
     `;
 
     let whereClauses = ["p.trash = '0'", "p.status = 1"];
     let params: any[] = [];
 
-    if (jenis === '0') {
-      if (product_id) {
-        whereClauses.push("p.product_id = ?");
-        params.push(product_id);
-      }
-    } else {
-      if (category_id) {
-        whereClauses.push("p.category_id = ?");
-        params.push(category_id);
-      }
+    if (product_id) {
+      whereClauses.push("p.product_id = ?");
+      params.push(product_id);
+    }
+    if (category_id) {
+      whereClauses.push("p.category_id = ?");
+      params.push(category_id);
     }
 
     // Session logic (type_user = 0 means public/regular user in PHP logic provided)

@@ -138,7 +138,7 @@ export const getProdukStore = async (req: Request, res: Response) => {
   if (!product_id) return errorResponse(res, 'product_id is required');
 
   try {
-    let where = `sw_store.status = 1 AND sw_store.trash = 0 AND ptd.product_id = ?`;
+    let where = `s.status = 1 AND s.trash = 0 AND ptd.product_id = ?`;
     const params: any[] = [product_id];
     if (store_id) {
       where += ' AND ptd.store_id = ?';
