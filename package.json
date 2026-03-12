@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build",
+    "start": "tsx server.ts",
+    "start:prod": "NODE_ENV=production tsx server.ts",
     "preview": "vite preview",
     "lint": "tsc --noEmit"
   },
@@ -20,7 +22,8 @@
     "motion": "^10.16.4",
     "mysql2": "^3.6.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -32,7 +35,6 @@
     "autoprefixer": "^10.4.15",
     "postcss": "^8.4.28",
     "tailwindcss": "^4.1.14",
-    "tsx": "^4.21.0",
     "typescript": "^5.2.2",
     "vite": "^6.2.0"
   }
