@@ -1,0 +1,402 @@
+{
+  "info": {
+    "name": "kanzamall-all-api",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Complete KanzaMall API collection for local development. Set environment variable baseUrl (default http://localhost:3000) and authToken."
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/health", "host": ["{{baseUrl}}"], "path": ["api","health"] }
+      }
+    },
+    {
+      "name": "Auth - Admin Login",
+      "request": {
+        "method": "POST",
+        "body": { "mode": "raw", "raw": "{\"username\":\"admin\",\"password\":\"admin123\"}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/auth/admin/login", "host": ["{{baseUrl}}"], "path": ["api","auth","admin","login"] }
+      }
+    },
+    {
+      "name": "Auth - Customer Register",
+      "request": {
+        "method": "POST",
+        "body": { "mode": "raw", "raw": "{\"firstname\":\"Budi Santoso\",\"email\":\"budi@example.com\",\"telephone\":\"081234567890\",\"password\":\"password123\",\"confirm_password\":\"password123\",\"kode_kanza\":\"KA2400001\",\"agree\":true}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/auth/customer/register", "host": ["{{baseUrl}}"], "path": ["api","auth","customer","register"] }
+      }
+    },
+    {
+      "name": "Auth - Customer Login",
+      "request": {
+        "method": "POST",
+        "body": { "mode": "raw", "raw": "{\"telephone\":\"081234567890\",\"password\":\"password123\"}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/auth/customer/login", "host": ["{{baseUrl}}"], "path": ["api","auth","customer","login"] }
+      }
+    },
+    {
+      "name": "Auth - Get Customer by ID",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/auth/customer/123", "host": ["{{baseUrl}}"], "path": ["api","auth","customer","123"] }
+      }
+    },
+    {
+      "name": "Auth - Update Customer (multipart)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "customer_id", "value": "123", "type": "text" },
+            { "key": "firstname", "value": "Budi", "type": "text" },
+            { "key": "email", "value": "budi@example.com", "type": "text" },
+            { "key": "store_id", "value": "1", "type": "text" },
+            { "key": "no_rek", "value": "12345678", "type": "text" },
+            { "key": "nama_rek", "value": "Budi", "type": "text" },
+            { "key": "nama_bank", "value": "BCA", "type": "text" },
+            { "key": "nik", "value": "", "type": "text" },
+            { "key": "kk", "value": "", "type": "text" },
+            { "key": "image", "type": "file" }
+          ]
+        },
+        "url": { "raw": "{{baseUrl}}/api/auth/customer/update", "host": ["{{baseUrl}}"], "path": ["api","auth","customer","update"] }
+      }
+    },
+    {
+      "name": "Slideshows - Get",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/slideshow", "host": ["{{baseUrl}}"], "path": ["api","slideshow"] }
+      }
+    },
+    {
+      "name": "Products - List",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/products?limit=8", "host": ["{{baseUrl}}"], "path": ["api","products"], "query": [{ "key": "limit", "value": "8" }] }
+      }
+    },
+    {
+      "name": "Products - Get by product_id (query)",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/products?product_id=36", "host": ["{{baseUrl}}"], "path": ["api","products"], "query": [{ "key": "product_id", "value": "36" }] }
+      }
+    },
+    {
+      "name": "Products - Best Selling",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/products/best-selling?limit=10", "host": ["{{baseUrl}}"], "path": ["api","products","best-selling"], "query": [{ "key": "limit", "value": "10" }] }
+      }
+    },
+    {
+      "name": "Products - Search",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/products/search?q=sabun", "host": ["{{baseUrl}}"], "path": ["api","products","search"], "query": [{ "key": "q", "value": "sabun" }] }
+      }
+    },
+    {
+      "name": "Products - Deals",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/products/deals?limit=4", "host": ["{{baseUrl}}"], "path": ["api","products","deals"], "query": [{ "key": "limit", "value": "4" }] }
+      }
+    },
+    {
+      "name": "Products - By Category (param)",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/products/category/1", "host": ["{{baseUrl}}"], "path": ["api","products","category","1"] }
+      }
+    },
+    {
+      "name": "Product Options - Get",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/product-options?product_id=36", "host": ["{{baseUrl}}"], "path": ["api","product-options"], "query": [{ "key": "product_id", "value": "36" }] }
+      }
+    },
+    {
+      "name": "Product Related - Get",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/product-related/36", "host": ["{{baseUrl}}"], "path": ["api","product-related","36"] }
+      }
+    },
+    {
+      "name": "Reviews - Get By Product",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/reviews/36", "host": ["{{baseUrl}}"], "path": ["api","reviews","36"] }
+      }
+    },
+    {
+      "name": "Categories - List",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/categories", "host": ["{{baseUrl}}"], "path": ["api","categories"] }
+      }
+    },
+    {
+      "name": "Articles - List",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/articles", "host": ["{{baseUrl}}"], "path": ["api","articles"] }
+      }
+    },
+    {
+      "name": "Articles - Get by artikel_id (query)",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/articles?artikel_id=123", "host": ["{{baseUrl}}"], "path": ["api","articles"], "query": [{ "key": "artikel_id", "value": "123" }] }
+      }
+    },
+    {
+      "name": "Articles - Get by artikel_id (param)",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/articles/123", "host": ["{{baseUrl}}"], "path": ["api","articles","123"] }
+      }
+    },
+    {
+      "name": "Addresses - Get list",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/addresses?customer_id=1", "host": ["{{baseUrl}}"], "path": ["api","addresses"], "query": [{ "key": "customer_id", "value": "1" }] }
+      }
+    },
+    {
+      "name": "Addresses - Save",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "body": { "mode": "raw", "raw": "{\"customer_id\":1,\"address\":\"Jl. Contoh\",\"kecamatan_id\":10,\"kelurahan_id\":20,\"kodepos\":\"60234\",\"default\":1}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/addresses", "host": ["{{baseUrl}}"], "path": ["api","addresses"] }
+      }
+    },
+    {
+      "name": "Addresses - Update",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "body": { "mode": "raw", "raw": "{\"address_id\":5,\"customer_id\":1,\"address\":\"Jl. Baru\"}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/addresses/1/5", "host": ["{{baseUrl}}"], "path": ["api","addresses","1","5"] }
+      }
+    },
+    {
+      "name": "Addresses - Set Default",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "body": { "mode": "raw", "raw": "{\"customer_id\":1,\"address_id\":5}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/addresses/default", "host": ["{{baseUrl}}"], "path": ["api","addresses","default"] }
+      }
+    },
+    {
+      "name": "Addresses - Delete",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/addresses/1/5", "host": ["{{baseUrl}}"], "path": ["api","addresses","1","5"] }
+      }
+    },
+    {
+      "name": "Alamat - Kelurahan",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/kelurahan?kecamatan_id=10", "host": ["{{baseUrl}}"], "path": ["api","kelurahan"], "query": [{ "key": "kecamatan_id", "value": "10" }] }
+      }
+    },
+    {
+      "name": "Alamat - Kecamatan",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/kecamatan?city_id=1", "host": ["{{baseUrl}}"], "path": ["api","kecamatan"], "query": [{ "key": "city_id", "value": "1" }] }
+      }
+    },
+    {
+      "name": "Alamat - Kota",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/kota?city_id=1", "host": ["{{baseUrl}}"], "path": ["api","kota"], "query": [{ "key": "city_id", "value": "1" }] }
+      }
+    },
+    {
+      "name": "Alamat - Propinsi",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/propinsi", "host": ["{{baseUrl}}"], "path": ["api","propinsi"] }
+      }
+    },
+    {
+      "name": "Alamat - Country",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/country", "host": ["{{baseUrl}}"], "path": ["api","country"] }
+      }
+    },
+    {
+      "name": "Kodepos - Get",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/kodepos?kelurahan_id=20", "host": ["{{baseUrl}}"], "path": ["api","kodepos"], "query": [{ "key": "kelurahan_id", "value": "20" }] }
+      }
+    },
+    {
+      "name": "Wishlist - Get",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/wishlist?customer_id=1", "host": ["{{baseUrl}}"], "path": ["api","wishlist"], "query": [{ "key": "customer_id", "value": "1" }] }
+      }
+    },
+    {
+      "name": "Wishlist - Add",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "body": { "mode": "raw", "raw": "{\"customer_id\":1,\"product_id\":36}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/wishlist", "host": ["{{baseUrl}}"], "path": ["api","wishlist"] }
+      }
+    },
+    {
+      "name": "Wishlist - Delete",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/wishlist/1/36", "host": ["{{baseUrl}}"], "path": ["api","wishlist","1","36"] }
+      }
+    },
+    {
+      "name": "Rewards - Customer Points & Komisi",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/customer/points-komisi?customer_id=171", "host": ["{{baseUrl}}"], "path": ["api","customer","points-komisi"], "query": [{ "key": "customer_id", "value": "171" }] }
+      }
+    },
+    {
+      "name": "Rewards - Pencairan List",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/pencairan", "host": ["{{baseUrl}}"], "path": ["api","pencairan"] }
+      }
+    },
+    {
+      "name": "Rewards - Pencairan Store (POST)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "body": { "mode": "raw", "raw": "{\"customer_id\":171,\"amount\":100000,\"bank\":\"BCA\",\"no_rek\":\"6281xxxx\",\"nama_rek\":\"Risa\"}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/pencairan", "host": ["{{baseUrl}}"], "path": ["api","pencairan"] }
+      }
+    },
+    {
+      "name": "Midtrans - Save (jenis=histori)",
+      "request": {
+        "method": "POST",
+        "body": { "mode": "raw", "raw": "{\"jenis\":\"histori\",\"data\":{}}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/midtrans?jenis=histori", "host": ["{{baseUrl}}"], "path": ["api","midtrans"], "query": [{ "key": "jenis", "value": "histori" }] }
+      }
+    },
+    {
+      "name": "Midtrans - Update Order",
+      "request": {
+        "method": "PUT",
+        "body": { "mode": "raw", "raw": "{\"order_status_id\":5}", "options": { "raw": { "language": "json" } } },
+        "url": { "raw": "{{baseUrl}}/api/midtrans/123", "host": ["{{baseUrl}}"], "path": ["api","midtrans","123"] }
+      }
+    },
+    {
+      "name": "Orders - List",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/orders", "host": ["{{baseUrl}}"], "path": ["api","orders"] }
+      }
+    },
+    {
+      "name": "OrderProduct - Order History",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/order-history?order_id=123", "host": ["{{baseUrl}}"], "path": ["api","order-history"], "query": [{ "key": "order_id", "value": "123" }] }
+      }
+    },
+    {
+      "name": "Master Wilayah - Cek Wilayah",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/cek-wilayah?city_id=1", "host": ["{{baseUrl}}"], "path": ["api","cek-wilayah"], "query": [{ "key": "city_id", "value": "1" }] }
+      }
+    },
+    {
+      "name": "Ongkir - Get",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/ongkir?origin=1&destination=2&weight=1000", "host": ["{{baseUrl}}"], "path": ["api","ongkir"], "query": [{ "key": "origin", "value": "1" }, { "key": "destination", "value": "2" }, { "key": "weight", "value": "1000" }] }
+      }
+    },
+    {
+      "name": "Privacy - Get",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/privacy", "host": ["{{baseUrl}}"], "path": ["api","privacy"] }
+      }
+    },
+    {
+      "name": "Terms - Get",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/terms", "host": ["{{baseUrl}}"], "path": ["api","terms"] }
+      }
+    },
+    {
+      "name": "Testimony - Get",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/testimonies", "host": ["{{baseUrl}}"], "path": ["api","testimonies"] }
+      }
+    },
+    {
+      "name": "Tutorial - Get",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/tutorials", "host": ["{{baseUrl}}"], "path": ["api","tutorials"] }
+      }
+    },
+    {
+      "name": "AboutUs - Stores",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/stores", "host": ["{{baseUrl}}"], "path": ["api","stores"] }
+      }
+    },
+    {
+      "name": "AboutUs - Check Wilayah",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/stores/check-wilayah?city_id=1", "host": ["{{baseUrl}}"], "path": ["api","stores","check-wilayah"], "query": [{ "key": "city_id", "value": "1" }] }
+      }
+    },
+    {
+      "name": "Komisi - Summary",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}" }],
+        "url": { "raw": "{{baseUrl}}/api/komisi/summary", "host": ["{{baseUrl}}"], "path": ["api","komisi","summary"] }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "authToken", "value": "" }
+  ]
+}

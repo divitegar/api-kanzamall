@@ -1,0 +1,5 @@
+{
+  "name": "Express Migration Hub",
+  "description": "A full-stack application migrating from CodeIgniter 4 to Express.js with SQLite support.",
+  "requestFramePermissions": []
+}
