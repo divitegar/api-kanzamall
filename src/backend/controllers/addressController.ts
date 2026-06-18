@@ -26,19 +26,66 @@ export const getAddress = async (req: AuthRequest, res: Response) => {
 
   try {
     const select = `
-      SELECT a.*, c.name as country_name, z.name as zone_name, ci.name as city_name,
-             d.name as districts_name, cd.subdistrict_name, cd.tariff_code,
-             IFNULL(s.code_origin,'DPK10000') as code_origin, s.store_id, s.name as store_name,
-             mw.mst_wilayah_id, mw.urut_jarak
+      SELECT 
+    a.*, 
+    c.name as country_name, 
+    z.name as zone_name, 
+    ci.name as city_name,
+    d.name as districts_name, 
+    cd.subdistrict_name, 
+    cd.tariff_code,
+    IFNULL(s.code_origin,'DPK10000') as code_origin, 
+    s.store_id, 
+    s.name as store_name,
+    mw.mst_wilayah_id, 
+    mw.urut_jarak
+
       FROM sw_address a
-      LEFT JOIN sw_country c ON a.country_id = c.country_id
-      LEFT JOIN sw_zone z ON a.zone_id = z.zone_id AND a.country_id = z.country_id
-      LEFT JOIN sw_city ci ON a.city_id = ci.city_id AND a.zone_id = ci.zone_id AND a.country_id = ci.country_id
-      LEFT JOIN sw_districts d ON a.districts_id = d.districts_id AND a.city_id = d.city_id AND a.zone_id = d.zone_id AND a.country_id = d.country_id
-      LEFT JOIN sw_code_dest cd ON cd.zip_code = a.postcode AND cd.code_dest_id = a.code_dest_id
-      LEFT JOIN sw_dtl_wilayah dw ON a.city_id = dw.city_id AND dw.trash = 0
-      LEFT JOIN sw_mst_wilayah mw ON mw.mst_wilayah_id = dw.mst_wilayah_id AND mw.status = 1 AND mw.trash = 0
-      LEFT JOIN sw_store s ON s.mst_wilayah_id = dw.mst_wilayah_id AND s.status = 1 AND s.trash = 0
+
+      LEFT JOIN sw_country c 
+          ON a.country_id = c.country_id
+
+      LEFT JOIN sw_zone z 
+          ON a.zone_id = z.zone_id 
+        AND a.country_id = z.country_id
+
+      LEFT JOIN sw_city ci 
+          ON a.city_id = ci.city_id 
+        AND a.zone_id = ci.zone_id 
+        AND a.country_id = ci.country_id
+
+      LEFT JOIN sw_districts d 
+          ON a.districts_id = d.districts_id 
+        AND a.city_id = d.city_id 
+        AND a.zone_id = d.zone_id 
+        AND a.country_id = d.country_id
+
+      LEFT JOIN sw_code_dest cd  
+        ON cd.code_dest_id = a.code_dest_id
+        
+      LEFT JOIN (
+          SELECT 
+              city_id, 
+              MIN(mst_wilayah_id) as mst_wilayah_id
+          FROM sw_dtl_wilayah
+          WHERE trash = 0
+          GROUP BY city_id
+      ) dw ON a.city_id = dw.city_id
+      LEFT JOIN sw_mst_wilayah mw 
+          ON mw.mst_wilayah_id = dw.mst_wilayah_id 
+        AND mw.status = 1 
+        AND mw.trash = 0
+      LEFT JOIN (
+          SELECT 
+              mst_wilayah_id,
+              MIN(store_id) as store_id,
+              MAX(name) as name,
+              MAX(code_origin) as code_origin
+          FROM sw_store
+          WHERE status = 1 
+            AND trash = 0
+          GROUP BY mst_wilayah_id
+      ) s ON s.mst_wilayah_id = dw.mst_wilayah_id
     `;
 
     let where = 'a.customer_id = ?';

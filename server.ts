@@ -113,7 +113,7 @@ async function startServer() {
   app.use("/api/stores", storeRoutes);
   app.use("/api/articles", articleRoutes);
   app.use("/api/items", itemRoutes);
-  app.use("/api", aboutUsRoutes);
+  app.use("/api/about", aboutUsRoutes);
   app.use("/api", addressRoutes);
   app.use("/api", categoryRoutes);
   app.use("/api", inventoriOrderRoutes);
@@ -182,12 +182,16 @@ async function startServer() {
 
   // Vite middleware only for explicit development mode.
   if (process.env.NODE_ENV === "development") {
-    const { createServer: createViteServer } = await import("vite");
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (e: any) {
+      console.warn("⚠️  Vite could not be loaded (requires Node 18+), running API-only mode:", e.message);
+    }
   } else {
     app.use(express.static("dist"));
     app.get("*", (req, res) => {

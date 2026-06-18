@@ -12,7 +12,6 @@ import {
 const router = Router();
 
 router.get('/orders', getOrders);
-router.get('/orders/:order_id', getOrders);
 router.get('/orders/:order_id/products', getOrderProducts);
 router.post('/orders', saveOrder);
 router.put('/orders/:order_id', updateOrder);

@@ -7,6 +7,7 @@ router.get('/', getProducts);
 router.get('/deals', getProductDeals);
 router.get('/search', searchProducts);
 router.get('/best-selling', getBestSellingProducts);
+router.get('/category', getProductsByCategory);
 router.get('/category/:category_id', getProductsByCategory);
 
 export default router;
