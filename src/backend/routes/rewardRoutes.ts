@@ -1,32 +1,33 @@
-import { Router } from 'express';
-import * as rewardController from '../controllers/rewardController.js';
+import { Router } from "express";
+import * as rewardController from "../controllers/rewardController.js";
 
 const router = Router();
 
 // Reward master/details
-router.get('/rewards/dtlx', rewardController.getRewardDtlx);
-router.get('/rewards/dtl', rewardController.getRewardDtl);
-router.get('/rewards/mst', rewardController.getRewardMst);
+router.get("/rewards/dtlx", rewardController.getRewardDtlx);
+router.get("/rewards/dtl", rewardController.getRewardDtl);
+router.get("/rewards/mst", rewardController.getRewardMst);
+router.get("/rewards/history", rewardController.getRewardHistory);
 
 // Point rewards
-router.get('/point-rewards', rewardController.getPointRewards);
-router.get('/point-rewards/:id', rewardController.getPointRewards);
+router.get("/point-rewards", rewardController.getPointRewards);
+router.get("/point-rewards/:id", rewardController.getPointRewards);
 
 // Pencairan
-router.get('/history-reward', rewardController.getPencairan);
-router.post('/pencairan-reward', rewardController.storeCairReward);
+router.get("/history-reward", rewardController.getPencairan);
+router.post("/pencairan-reward", rewardController.storeCairReward);
 
 // Update point cair
-router.put('/point-reward/update', rewardController.updatePointcair);
-router.put('/point-reward/update-dtl', rewardController.updatePointcair2);
+router.put("/point-reward/update", rewardController.updatePointcair);
+router.put("/point-reward/update-dtl", rewardController.updatePointcair2);
 
 // Customer / kode check
-router.get('/customer', rewardController.getCustomer);
-router.get('/customer/members/by-distributor', rewardController.getMemberByDistributor);
-router.get('/customer/members/list', rewardController.getCustomerMemberList);
+router.get("/customer", rewardController.getCustomer);
+router.get("/customer/members/by-distributor", rewardController.getMemberByDistributor);
+router.get("/customer/members/list", rewardController.getCustomerMemberList);
 // Register specific points-komisi route before the param route to avoid route collision
-router.get('/customer/points-komisi', rewardController.getCustomerPointsKomisi);
-router.get('/customer/:customer_id', rewardController.getCustomer);
-router.get('/cek-kode-kanza', rewardController.cekKodeKanza);
+router.get("/customer/points-komisi", rewardController.getCustomerPointsKomisi);
+router.get("/customer/:customer_id", rewardController.getCustomer);
+router.get("/cek-kode-kanza", rewardController.cekKodeKanza);
 
 export default router;

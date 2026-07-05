@@ -9,6 +9,8 @@ const toNum = (v) => {
 export const getOrders = async (req, res) => {
     const orderIdParam = req.params.order_id ?? req.query.order_id;
     const order_id = orderIdParam !== undefined ? String(orderIdParam) : undefined;
+    const customerIdParam = req.query.customer_id ?? req.params.customer_id;
+    const customer_id = customerIdParam !== undefined ? String(customerIdParam) : undefined;
     try {
         let query = `
       SELECT o.*, os.name as status_name
@@ -19,6 +21,10 @@ export const getOrders = async (req, res) => {
         if (order_id) {
             query += ' WHERE o.order_id = ?';
             params.push(order_id);
+        }
+        else if (customer_id) {
+            query += ' WHERE o.customer_id = ?';
+            params.push(customer_id);
         }
         const [rows] = await pool.query(query, params);
         return successResponse(res, { orders: rows }, 'Orders retrieved successfully');

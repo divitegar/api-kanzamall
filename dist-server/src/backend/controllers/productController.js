@@ -1,7 +1,31 @@
+import jwt from 'jsonwebtoken';
 import pool from '../config/db.js';
 import { successResponse, errorResponse } from '../helpers/apiResponse.js';
+const JWT_SECRET = process.env.JWT_SECRET || 'kanzamall_default_secret_key_2024';
+const resolveLeaderFilter = (req) => {
+    const fromReqUser = req.user?.leader;
+    if (fromReqUser !== undefined) {
+        return Number(fromReqUser) === 1 ? 1 : 0;
+    }
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return 0;
+    }
+    const token = authHeader.slice(7).trim();
+    if (!token) {
+        return 0;
+    }
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        return Number(decoded?.leader) === 1 ? 1 : 0;
+    }
+    catch {
+        return 0;
+    }
+};
 export const getProducts = async (req, res) => {
     const { product_id, category_id, jenis, limit = 8 } = req.query;
+    const leaderFilter = resolveLeaderFilter(req);
     try {
         // Detail access: bump product view counter when product_id is explicitly requested.
         if (product_id) {
@@ -35,8 +59,9 @@ export const getProducts = async (req, res) => {
         GROUP BY op.product_id
       ) sales ON sales.product_id = p.product_id
     `;
-        let whereClauses = ["p.trash = '0'", "p.status = 1"];
+        let whereClauses = ["p.trash = '0'", 'p.leader = ?'];
         let params = [];
+        params.push(leaderFilter);
         if (product_id) {
             whereClauses.push("p.product_id = ?");
             params.push(product_id);
@@ -45,13 +70,8 @@ export const getProducts = async (req, res) => {
             whereClauses.push("p.category_id = ?");
             params.push(category_id);
         }
-        // Session logic (type_user = 0 means public/regular user in PHP logic provided)
-        // If not logged in or type_user is 0, show only leader=0 products
-        const user = req.user;
-        if (!user || user.type !== 'admin') {
-            whereClauses.push("p.leader = 0");
-        }
         query += " WHERE " + whereClauses.join(" AND ");
+        query += " ORDER BY p.product_id ASC";
         query += " LIMIT ?";
         params.push(Number(limit));
         const [rows] = await pool.query(query, params);
@@ -62,25 +82,24 @@ export const getProducts = async (req, res) => {
     }
 };
 export const getProductsByCategory = async (req, res) => {
-    const { category_id } = req.params;
+    const categoryIdParam = req.params.category_id ?? req.query.category_id;
+    const category_id = categoryIdParam !== undefined ? Number(categoryIdParam) : undefined;
+    const leaderFilter = resolveLeaderFilter(req);
+    if (category_id === undefined || Number.isNaN(category_id)) {
+        return errorResponse(res, 'category_id is required', 400);
+    }
     try {
         let query = `
       SELECT pd.name, p.*
       FROM sw_product p
       LEFT JOIN sw_product_description pd ON pd.product_id = p.product_id
     `;
-        let whereClauses = ["p.trash = '0'", "p.status = 1"];
-        let params = [];
-        if (category_id) {
-            whereClauses.push("p.category_id = ?");
-            params.push(category_id);
-        }
-        const user = req.user;
-        if (!user || user.type !== 'admin') {
-            whereClauses.push("p.leader = 0");
-            whereClauses.push("p.dashboard = '0'");
-        }
+        let whereClauses = ["p.trash = '0'", "p.status = 1", 'p.leader = ?'];
+        let params = [leaderFilter];
+        whereClauses.push("p.category_id = ?");
+        params.push(category_id);
         query += " WHERE " + whereClauses.join(" AND ");
+        query += " ORDER BY p.date_added ASC, p.product_id ASC";
         const [rows] = await pool.query(query, params);
         return successResponse(res, { products: rows }, 'Products by category retrieved successfully');
     }
@@ -90,16 +109,23 @@ export const getProductsByCategory = async (req, res) => {
 };
 export const getProductDeals = async (req, res) => {
     const limit = req.query.limit || 4;
+    const leaderFilter = resolveLeaderFilter(req);
     try {
         const query = `
       SELECT pd.name, cd.name as category_name, p.*
       FROM sw_product p
       LEFT JOIN sw_product_description pd ON pd.product_id = p.product_id
       LEFT JOIN sw_category_description cd ON cd.category_id = p.category_id
-      WHERE p.trash = '0' AND p.status = 1 AND p.deal = '1' AND p.dashboard = '0'
+      WHERE p.trash = '0' 
+        AND p.status = 1 
+        AND p.deal = '1' 
+        AND p.dashboard = '0' 
+        AND p.leader = ?
+        AND (p.end_deal IS NULL OR p.end_deal >= NOW())
+      ORDER BY p.date_added ASC, p.product_id ASC
       LIMIT ?
     `;
-        const [rows] = await pool.query(query, [Number(limit)]);
+        const [rows] = await pool.query(query, [leaderFilter, Number(limit)]);
         return successResponse(res, { products: rows }, 'Product deals retrieved successfully');
     }
     catch (error) {
@@ -108,6 +134,7 @@ export const getProductDeals = async (req, res) => {
 };
 export const searchProducts = async (req, res) => {
     const { q, category_id = 0, limit = 20 } = req.query;
+    const leaderFilter = resolveLeaderFilter(req);
     try {
         let query = `
       SELECT 
@@ -126,8 +153,8 @@ export const searchProducts = async (req, res) => {
       LEFT JOIN sw_weight_class wc ON wc.weight_class_id = p.weight_class_id
       LEFT JOIN sw_category_description cd ON cd.category_id = p.category_id
     `;
-        let whereClauses = ["p.trash = '0'", "p.status = 1"];
-        let params = [];
+        let whereClauses = ["p.trash = '0'", "p.status = 1", 'p.leader = ?'];
+        let params = [leaderFilter];
         if (q) {
             whereClauses.push("pd.name LIKE ?");
             params.push(`%${q}%`);
@@ -136,12 +163,9 @@ export const searchProducts = async (req, res) => {
             whereClauses.push("p.category_id = ?");
             params.push(category_id);
         }
-        const user = req.user;
-        if (!user || user.type !== 'admin') {
-            whereClauses.push("p.leader = 0");
-            whereClauses.push("p.dashboard = '0'");
-        }
+        whereClauses.push("p.dashboard = '0'");
         query += " WHERE " + whereClauses.join(" AND ");
+        query += " ORDER BY p.date_added ASC, p.product_id ASC";
         query += " LIMIT ?";
         params.push(Number(limit));
         const [rows] = await pool.query(query, params);
@@ -153,6 +177,7 @@ export const searchProducts = async (req, res) => {
 };
 export const getBestSellingProducts = async (req, res) => {
     const limit = Number(req.query.limit) || 10;
+    const leaderFilter = resolveLeaderFilter(req);
     try {
         // Aggregate top product ids from completed orders (order_status_id = 7)
         // but only consider products that are active (status = 1 and trash = 0)
@@ -161,12 +186,12 @@ export const getBestSellingProducts = async (req, res) => {
       FROM sw_order_product op
       JOIN sw_order o ON o.order_id = op.order_id
       JOIN sw_product p ON p.product_id = op.product_id
-      WHERE o.order_status_id = 7 AND p.status = 1 AND p.trash = 0
+      WHERE o.order_status_id = 7 AND p.status = 1 AND p.trash = 0 AND p.leader = ?
       GROUP BY op.product_id
       ORDER BY total_qty DESC
       LIMIT ?
     `;
-        const [topRows] = await pool.query(topQuery, [limit]);
+        const [topRows] = await pool.query(topQuery, [leaderFilter, limit]);
         if (!topRows || topRows.length === 0) {
             return successResponse(res, { products: [] }, 'Best selling products retrieved successfully');
         }
@@ -190,10 +215,10 @@ export const getBestSellingProducts = async (req, res) => {
       LEFT JOIN sw_weight_class wc ON wc.weight_class_id = p.weight_class_id
       LEFT JOIN sw_category_description cd ON cd.category_id = p.category_id
       WHERE p.product_id IN (${placeholders})
-        AND p.trash = '0' AND p.status = 1
+        AND p.trash = '0' AND p.status = 1 AND p.leader = ?
       ORDER BY FIELD(p.product_id, ${placeholders})
     `;
-        const params = [...productIds, ...productIds];
+        const params = [...productIds, leaderFilter, ...productIds];
         const [rows] = await pool.query(query, params);
         // Map total_qty by product_id
         const qtyMap = new Map();

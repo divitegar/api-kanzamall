@@ -1,10 +1,10 @@
-import { Request, Response } from 'express';
-import pool from '../config/db.js';
-import { successResponse, errorResponse } from '../helpers/apiResponse.js';
+import { Request, Response } from "express";
+import pool from "../config/db.js";
+import { successResponse, errorResponse } from "../helpers/apiResponse.js";
 
 export const getRewardDtlx = async (req: Request, res: Response) => {
   const customer_id = (req.query.customer_id as string) || (req.body && req.body.customer_id);
-  if (!customer_id) return errorResponse(res, 'customer_id is required');
+  if (!customer_id) return errorResponse(res, "customer_id is required");
 
   try {
     const query = `
@@ -38,16 +38,16 @@ export const getRewardDtl = async (req: Request, res: Response) => {
     const where: string[] = [];
 
     if (customer_id) {
-      where.push('c.customer_id = ?');
+      where.push("c.customer_id = ?");
       params.push(customer_id);
     }
     if (no_invoice) {
-      where.push('r.order_id = ?');
+      where.push("r.order_id = ?");
       params.push(no_invoice);
     }
 
-    if (where.length > 0) query += ' WHERE ' + where.join(' AND ');
-    query += ' ORDER BY r.tanggal ASC';
+    if (where.length > 0) query += " WHERE " + where.join(" AND ");
+    query += " ORDER BY r.tanggal ASC";
 
     const [rows]: any = await pool.query(query, params);
     return successResponse(res, { rewards: rows });
@@ -71,14 +71,106 @@ export const getRewardMst = async (req: Request, res: Response) => {
 
     const params: any[] = [];
     if (customer_id) {
-      query += ' AND c.customer_id = ?';
+      query += " AND c.customer_id = ?";
       params.push(customer_id);
     }
 
-    query += ' GROUP BY r.invoice_no ORDER BY r.tanggal ASC';
+    query += " GROUP BY r.invoice_no ORDER BY r.tanggal ASC";
 
     const [rows]: any = await pool.query(query, params);
     return successResponse(res, { reward_master: rows });
+  } catch (err: any) {
+    return errorResponse(res, err.message, 500);
+  }
+};
+
+export const getRewardHistory = async (req: Request, res: Response) => {
+  const customer_id = (req.query.customer_id as string) || (req.body && req.body.customer_id);
+  const date_start = (req.query.date_start as string) || (req.body && req.body.date_start);
+  const date_end = (req.query.date_end as string) || (req.body && req.body.date_end);
+  const search = ((req.query.search as string) || (req.body && req.body.search) || "").trim();
+  const page = Math.max(1, Number(req.query.page || req.body?.page || 1) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit || req.body?.limit || 10) || 10));
+  const offset = (page - 1) * limit;
+
+  if (!customer_id) return errorResponse(res, "customer_id is required", 400);
+
+  try {
+    let whereClause = " WHERE r.customer_id = ? ";
+    const params: any[] = [customer_id];
+
+    if (date_start) {
+      whereClause += " AND DATE(r.tanggal) >= ?";
+      params.push(date_start);
+    }
+
+    if (date_end) {
+      whereClause += " AND DATE(r.tanggal) <= ?";
+      params.push(date_end);
+    }
+
+    if (search) {
+      whereClause += " AND (r.invoice_no LIKE ? OR o.firstname LIKE ? OR o.store_name LIKE ?)";
+      const keyword = `%${search}%`;
+      params.push(keyword, keyword, keyword);
+    }
+
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM sw_customer_reward_dtl r
+      LEFT JOIN sw_order o ON o.order_id = r.order_id
+      ${whereClause}
+    `;
+    const [countRows]: any = await pool.query(countQuery, params);
+    const totalData = Number(countRows?.[0]?.total || 0) || 0;
+
+    const sumQuery = "SELECT COALESCE(SUM(reward), 0) as total_points FROM sw_customer_reward_dtl WHERE customer_id = ?";
+    const [sumRows]: any = await pool.query(sumQuery, [customer_id]);
+    const totalPoints = Number(sumRows?.[0]?.total_points || 0) || 0;
+
+    const dataQuery = `
+      SELECT
+        r.order_id,
+        r.invoice_no,
+        r.reward,
+        r.tanggal,
+        o.firstname as sumber_point,
+        o.store_name,
+        o.order_status_id
+      FROM sw_customer_reward_dtl r
+      LEFT JOIN sw_order o ON o.order_id = r.order_id
+      ${whereClause}
+      ORDER BY r.tanggal DESC
+      LIMIT ? OFFSET ?
+    `;
+    const [rows]: any = await pool.query(dataQuery, [...params, limit, offset]);
+
+    const history = (rows || []).map((row: any) => ({
+      tanggal: row.tanggal,
+      aktivitas: row.invoice_no ? `Point dari transaksi ${row.invoice_no}` : "Point dari transaksi",
+      sumber_point: row.sumber_point || row.store_name || "-",
+      jumlah_point: Number(row.reward || 0) || 0,
+      invoice_no: row.invoice_no || null,
+      order_id: row.order_id || null,
+      order_status_id: row.order_status_id ?? null,
+    }));
+
+    return successResponse(
+      res,
+      {
+        history,
+        pagination: {
+          page,
+          limit,
+          total_data: totalData,
+          total_page: Math.max(1, Math.ceil(totalData / limit)),
+        },
+        summary: {
+          total_points: totalPoints,
+        },
+      },
+      "Reward history retrieved",
+    );
   } catch (err: any) {
     return errorResponse(res, err.message, 500);
   }
@@ -101,7 +193,7 @@ export const getPointRewards = async (req: Request, res: Response) => {
 
 export const getPencairan = async (req: Request, res: Response) => {
   const customer_id = (req.query.customer_id as string) || (req.body && req.body.customer_id);
-  if (!customer_id) return errorResponse(res, 'customer_id is required');
+  if (!customer_id) return errorResponse(res, "customer_id is required");
 
   try {
     const query = `
@@ -121,12 +213,16 @@ export const getPencairan = async (req: Request, res: Response) => {
 
 export const storeCairReward = async (req: Request, res: Response) => {
   const data = req.body;
-  if (!data || !data.customer_id || !data.point_reward_id) return errorResponse(res, 'customer_id and point_reward_id are required');
+  if (!data || !data.customer_id || !data.point_reward_id) return errorResponse(res, "customer_id and point_reward_id are required");
   try {
-    const [result]: any = await pool.query(`INSERT INTO sw_customer_point_reward (customer_id, point_reward_id, points, name, date_added) VALUES (?, ?, ?, ?, ?)`,
-      [data.customer_id, data.point_reward_id, data.points || 0, data.name || '', data.date_added || new Date()]
-    );
-    return successResponse(res, { insertId: result.insertId }, 'Pencairan request stored', 201);
+    const [result]: any = await pool.query(`INSERT INTO sw_customer_point_reward (customer_id, point_reward_id, points, name, date_added) VALUES (?, ?, ?, ?, ?)`, [
+      data.customer_id,
+      data.point_reward_id,
+      data.points || 0,
+      data.name || "",
+      data.date_added || new Date(),
+    ]);
+    return successResponse(res, { insertId: result.insertId }, "Pencairan request stored", 201);
   } catch (err: any) {
     return errorResponse(res, err.message, 500);
   }
@@ -134,15 +230,15 @@ export const storeCairReward = async (req: Request, res: Response) => {
 
 export const updatePointcair = async (req: Request, res: Response) => {
   const data = req.body;
-  if (!data || !data.customer_id) return errorResponse(res, 'customer_id is required');
+  if (!data || !data.customer_id) return errorResponse(res, "customer_id is required");
   try {
-    const keys = Object.keys(data).filter(k => k !== 'customer_id');
-    if (keys.length === 0) return errorResponse(res, 'No fields to update');
-    const setClause = keys.map(k => `${k} = ?`).join(', ');
-    const params = keys.map(k => (data as any)[k]);
+    const keys = Object.keys(data).filter((k) => k !== "customer_id");
+    if (keys.length === 0) return errorResponse(res, "No fields to update");
+    const setClause = keys.map((k) => `${k} = ?`).join(", ");
+    const params = keys.map((k) => (data as any)[k]);
     params.push(data.customer_id);
     const [result]: any = await pool.query(`UPDATE sw_customer_reward SET ${setClause} WHERE customer_id = ?`, params);
-    return successResponse(res, { affectedRows: result.affectedRows }, 'Customer reward updated');
+    return successResponse(res, { affectedRows: result.affectedRows }, "Customer reward updated");
   } catch (err: any) {
     return errorResponse(res, err.message, 500);
   }
@@ -150,15 +246,15 @@ export const updatePointcair = async (req: Request, res: Response) => {
 
 export const updatePointcair2 = async (req: Request, res: Response) => {
   const data = req.body;
-  if (!data || !data.customer_id) return errorResponse(res, 'customer_id is required');
+  if (!data || !data.customer_id) return errorResponse(res, "customer_id is required");
   try {
-    const keys = Object.keys(data).filter(k => k !== 'customer_id');
-    if (keys.length === 0) return errorResponse(res, 'No fields to update');
-    const setClause = keys.map(k => `${k} = ?`).join(', ');
-    const params = keys.map(k => (data as any)[k]);
+    const keys = Object.keys(data).filter((k) => k !== "customer_id");
+    if (keys.length === 0) return errorResponse(res, "No fields to update");
+    const setClause = keys.map((k) => `${k} = ?`).join(", ");
+    const params = keys.map((k) => (data as any)[k]);
     params.push(data.customer_id);
     const [result]: any = await pool.query(`UPDATE sw_customer_reward_dtl SET ${setClause} WHERE customer_id = ?`, params);
-    return successResponse(res, { affectedRows: result.affectedRows }, 'Customer reward detail updated');
+    return successResponse(res, { affectedRows: result.affectedRows }, "Customer reward detail updated");
   } catch (err: any) {
     return errorResponse(res, err.message, 500);
   }
@@ -178,10 +274,10 @@ export const getCustomer = async (req: Request, res: Response) => {
     `;
     const params: any[] = [];
     if (customer_id) {
-      query += ' AND c.customer_id = ?';
+      query += " AND c.customer_id = ?";
       params.push(customer_id);
     }
-    query += ' ORDER BY c.customer_id DESC';
+    query += " ORDER BY c.customer_id DESC";
 
     const [rows]: any = await pool.query(query, params);
     return successResponse(res, { customers: rows });
@@ -192,7 +288,7 @@ export const getCustomer = async (req: Request, res: Response) => {
 
 export const getCustomerPointsKomisi = async (req: Request, res: Response) => {
   const customer_id = (req.query.customer_id as string) || (req.params && (req.params as any).customer_id);
-  if (!customer_id) return errorResponse(res, 'customer_id is required');
+  if (!customer_id) return errorResponse(res, "customer_id is required");
 
   try {
     const query = `
@@ -219,7 +315,7 @@ export const getCustomerPointsKomisi = async (req: Request, res: Response) => {
     `;
 
     const [rows]: any = await pool.query(query, [customer_id]);
-    const result = (rows && rows[0]) ? rows[0] : { points: 0, total_komisi: 0, completed_orders: 0 };
+    const result = rows && rows[0] ? rows[0] : { points: 0, total_komisi: 0, completed_orders: 0 };
     return successResponse(res, { customer_id: Number(customer_id), points: Number(result.points), total_komisi: Number(result.total_komisi), completed_orders: Number(result.completed_orders) });
   } catch (err: any) {
     return errorResponse(res, err.message, 500);
@@ -228,7 +324,7 @@ export const getCustomerPointsKomisi = async (req: Request, res: Response) => {
 
 export const cekKodeKanza = async (req: Request, res: Response) => {
   const kode_kanza = (req.query.kode_kanza as string) || (req.body && req.body.kode_kanza);
-  if (!kode_kanza) return errorResponse(res, 'kode_kanza is required');
+  if (!kode_kanza) return errorResponse(res, "kode_kanza is required");
   try {
     const [rows]: any = await pool.query(`SELECT telephone FROM sw_customer WHERE kode_kanza = ? AND type_user = 1`, [kode_kanza]);
     return successResponse(res, { result: rows });
@@ -239,16 +335,16 @@ export const cekKodeKanza = async (req: Request, res: Response) => {
 
 // Ported from legacy "get member" query (last 30 days by distributor/leader)
 export const getMemberByDistributor = async (req: Request, res: Response) => {
-  const username = String(req.query.customer_id ?? req.query.hp_distributor ?? '').trim();
+  const username = String(req.query.customer_id ?? req.query.hp_distributor ?? "").trim();
   const leader = Number(req.query.leader ?? 1);
 
   if (!username) {
-    return errorResponse(res, 'username is required', 400);
+    return errorResponse(res, "username is required", 400);
   }
 
   // Legacy logic used "$leader=1" in WHERE; when false, result should be empty.
   if (leader !== 1) {
-    return successResponse(res, { members: [] }, 'Members retrieved successfully');
+    return successResponse(res, { members: [] }, "Members retrieved successfully");
   }
 
   try {
@@ -305,7 +401,7 @@ export const getMemberByDistributor = async (req: Request, res: Response) => {
     `;
 
     const [rows]: any = await pool.query(query, [username]);
-    return successResponse(res, { members: rows }, 'Members retrieved successfully');
+    return successResponse(res, { members: rows }, "Members retrieved successfully");
   } catch (err: any) {
     return errorResponse(res, err.message, 500);
   }
@@ -318,18 +414,16 @@ export const getCustomerMemberList = async (req: Request, res: Response) => {
   const offset = (page - 1) * limit;
 
   // 🔥 FILTER PARAM
-  const search = String(req.query.search ?? '').trim();
-  const type_user = req.query.type_user !== undefined 
-    ? Number(req.query.type_user) 
-    : null;
+  const search = String(req.query.search ?? "").trim();
+  const type_user = req.query.type_user !== undefined ? Number(req.query.type_user) : null;
 
   try {
     if (!customer_id) {
-      return errorResponse(res, 'customer_id is required', 400);
+      return errorResponse(res, "customer_id is required", 400);
     }
 
     // 🔥 WHERE DINAMIS
-    let whereFilter = '';
+    let whereFilter = "";
     const params: any[] = [customer_id];
 
     if (search) {
@@ -424,11 +518,7 @@ export const getCustomerMemberList = async (req: Request, res: Response) => {
     const totalPage = Math.ceil(totalData / limit);
 
     // data
-    const [rows]: any = await pool.query(dataQuery, [
-      ...params,
-      limit,
-      offset
-    ]);
+    const [rows]: any = await pool.query(dataQuery, [...params, limit, offset]);
 
     return successResponse(
       res,
@@ -438,12 +528,11 @@ export const getCustomerMemberList = async (req: Request, res: Response) => {
           total_data: totalData,
           total_page: totalPage,
           current_page: page,
-          limit: limit
-        }
+          limit: limit,
+        },
       },
-      'Customer member list retrieved successfully'
+      "Customer member list retrieved successfully",
     );
-
   } catch (err: any) {
     return errorResponse(res, err.message, 500);
   }

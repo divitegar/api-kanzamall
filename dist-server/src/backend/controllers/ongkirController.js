@@ -1,5 +1,42 @@
+import https from 'node:https';
+import http from 'node:http';
 import pool from '../config/db.js';
 import { successResponse, errorResponse } from '../helpers/apiResponse.js';
+function httpPost(urlStr, postData) {
+    return new Promise((resolve, reject) => {
+        const url = new URL(urlStr);
+        const isHttps = url.protocol === 'https:';
+        const options = {
+            hostname: url.hostname,
+            port: url.port || (isHttps ? 443 : 80),
+            path: url.pathname + url.search,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json',
+                'Content-Length': Buffer.byteLength(postData),
+            },
+            rejectUnauthorized: false,
+        };
+        const transport = isHttps ? https : http;
+        const req = transport.request(options, (res) => {
+            let body = '';
+            res.setEncoding('utf8');
+            res.on('data', (chunk) => { body += chunk; });
+            res.on('end', () => {
+                if (res.statusCode && res.statusCode >= 400) {
+                    reject(Object.assign(new Error(`HTTP ${res.statusCode}`), { statusCode: res.statusCode, body }));
+                }
+                else {
+                    resolve(body);
+                }
+            });
+        });
+        req.on('error', reject);
+        req.write(postData);
+        req.end();
+    });
+}
 const JNE_BASE_PRICE = process.env.JNE_PRICE_URL || 'https://apiv2.jne.co.id:10206/tracing/api/pricedev';
 const JNE_GENERATE = process.env.JNE_GENERATE_URL || 'http://apiv2.jne.co.id:10102/tracing/api/generatecnote';
 const JNE_LIST = process.env.JNE_LIST_URL || 'https://apiv2.jne.co.id:10206/tracing/api/list/v1/cnote';
@@ -11,18 +48,27 @@ export const getOngkir = async (req, res) => {
     if (!from || !thru || !weight)
         return errorResponse(res, 'from, thru, weight required', 400);
     try {
+        const normalizedWeight = String(weight).trim().replace(',', '.');
+        const parsedWeight = Number(normalizedWeight);
+        if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
+            return errorResponse(res, 'weight must be a positive number', 400);
+        }
         const body = new URLSearchParams();
         body.append('username', JNE_USERNAME);
         body.append('api_key', JNE_APIKEY);
         body.append('from', String(from));
         body.append('thru', String(thru));
-        body.append('weight', String(weight));
-        const resp = await fetch(JNE_BASE_PRICE, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }, body: body.toString() });
-        const data = await resp.json();
+        body.append('weight', normalizedWeight);
+        const text = await httpPost(JNE_BASE_PRICE, body.toString());
+        const data = JSON.parse(text);
         return successResponse(res, { result: data }, 'Ongkir response');
     }
     catch (err) {
-        return errorResponse(res, err.message || 'External API error', 500);
+        const status = Number(err?.statusCode || 0);
+        if (status >= 400) {
+            return errorResponse(res, err?.message || `JNE API error: HTTP ${status}`, status === 403 ? 403 : 502);
+        }
+        return errorResponse(res, err?.message || 'External API error', 500);
     }
 };
 export const getResi = async (req, res) => {
@@ -74,8 +120,8 @@ export const getResi = async (req, res) => {
         params.append('OLSHOP_SERVICE', service);
         params.append('OLSHOP_COD_FLAG', 'N');
         params.append('OLSHOP_COD_AMOUNT', '0');
-        const resp = await fetch(JNE_GENERATE, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }, body: params.toString() });
-        const data = await resp.json();
+        const text = await httpPost(JNE_GENERATE, params.toString());
+        const data = JSON.parse(text);
         return successResponse(res, { result: data }, 'Resi generated');
     }
     catch (err) {
@@ -91,8 +137,8 @@ export const trackingResi = async (req, res) => {
         const params = new URLSearchParams();
         params.append('username', JNE_USERNAME);
         params.append('api_key', JNE_APIKEY);
-        const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }, body: params.toString() });
-        const data = await resp.json();
+        const text = await httpPost(url, params.toString());
+        const data = JSON.parse(text);
         return successResponse(res, { result: data }, 'Tracking result');
     }
     catch (err) {
@@ -148,8 +194,8 @@ export const pickup = async (req, res) => {
         params.append('QTY', String(row.total || 1));
         params.append('GOODS_DESC', 'Paket');
         params.append('AWB', String(awb_no || ''));
-        const resp = await fetch(JNE_PICKUP, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' }, body: params.toString() });
-        const data = await resp.json();
+        const text = await httpPost(JNE_PICKUP, params.toString());
+        const data = JSON.parse(text);
         return successResponse(res, { result: data }, 'Pickup response');
     }
     catch (err) {
