@@ -520,6 +520,33 @@ export const customerUpdate = async (req: Request, res: Response) => {
     return errorResponse(res, "No valid fields to update. Allowed: firstname, lastname, email, telephone, store_id, no_rek, nama_rek, nama_bank, nik, kk, image", 400);
   }
 
+  const requiredProfileFields: Record<string, string> = {
+    firstname: "Nama lengkap wajib diisi",
+    email: "Email wajib diisi",
+    store_id: "Store wajib dipilih",
+    nik: "NIK wajib diisi",
+    kk: "Nomor KK wajib diisi",
+    no_rek: "Nomor rekening wajib diisi",
+    nama_rek: "Atas nama rekening wajib diisi",
+    nama_bank: "Nama bank wajib diisi",
+  };
+
+  const fieldErrors: Record<string, string> = {};
+  Object.entries(requiredProfileFields).forEach(([field, message]) => {
+    const value = dataToUpdate[field];
+    if (value === undefined || value === null || String(value).trim() === "" || (field === "store_id" && Number(value) <= 0)) {
+      fieldErrors[field] = message;
+    }
+  });
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return res.status(400).json({
+      success: false,
+      error: "Lengkapi semua field wajib Data Akun",
+      field_errors: fieldErrors,
+    });
+  }
+
   if (dataToUpdate.email && !validateEmail(String(dataToUpdate.email))) {
     return errorResponse(res, "Alamat Email Harus Valid", 400);
   }

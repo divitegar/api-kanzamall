@@ -148,7 +148,16 @@ const buildMidtransItemDetails = (order, products) => {
 export const createMidtransSnapToken = async (req, res) => {
     const sourceBody = (req.body?.data && typeof req.body.data === "object" ? req.body.data : req.body) || {};
     const nestedOrder = sourceBody?.order && typeof sourceBody.order === "object" ? sourceBody.order : {};
-    const rawOrderId = sourceBody?.order_id ?? sourceBody?.orderId ?? sourceBody?.invoice_no ?? sourceBody?.invoiceNo ?? nestedOrder?.order_id ?? nestedOrder?.orderId ?? nestedOrder?.invoice_no ?? nestedOrder?.invoiceNo ?? req.query.order_id ?? req.query.invoice_no;
+    const rawOrderId = sourceBody?.order_id ??
+        sourceBody?.orderId ??
+        sourceBody?.invoice_no ??
+        sourceBody?.invoiceNo ??
+        nestedOrder?.order_id ??
+        nestedOrder?.orderId ??
+        nestedOrder?.invoice_no ??
+        nestedOrder?.invoiceNo ??
+        req.query.order_id ??
+        req.query.invoice_no;
     const rawCustomerId = sourceBody?.customer_id ?? sourceBody?.customerId ?? nestedOrder?.customer_id ?? req.query.customer_id;
     const orderKey = String(rawOrderId || "").trim();
     if (!orderKey) {
@@ -220,7 +229,9 @@ export const createMidtransSnapToken = async (req, res) => {
         const parsed = text ? JSON.parse(text) : {};
         if (!resp.ok) {
             const errorMessage = parsed?.error_messages || parsed?.message || `Midtrans error ${resp.status}`;
-            const takenOrderId = String(errorMessage || "").toLowerCase().includes("order_id has already been taken");
+            const takenOrderId = String(errorMessage || "")
+                .toLowerCase()
+                .includes("order_id has already been taken");
             if (takenOrderId) {
                 const existingStatus = await fetchMidtransStatus(transactionOrderId, config.server_key, config.environment);
                 if (existingStatus.ok) {

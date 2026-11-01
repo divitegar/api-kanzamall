@@ -1,5 +1,5 @@
-import pool from '../config/db.js';
-import { successResponse, errorResponse } from '../helpers/apiResponse.js';
+import pool from "../config/db.js";
+import { successResponse, errorResponse } from "../helpers/apiResponse.js";
 // Helper to cast param to number or undefined
 const toNum = (v) => {
     if (v === undefined || v === null)
@@ -7,11 +7,54 @@ const toNum = (v) => {
     const n = Number(v);
     return Number.isNaN(n) ? undefined : n;
 };
+const toCleanStr = (v) => String(v ?? "").trim();
+const normalizeAddressPayload = (body) => {
+    return {
+        customer_id: toNum(body?.customer_id),
+        firstname: toCleanStr(body?.firstname),
+        lastname: toCleanStr(body?.lastname),
+        telephone: toCleanStr(body?.telephone),
+        company: toCleanStr(body?.company),
+        address_1: toCleanStr(body?.address_1),
+        address_2: toCleanStr(body?.address_2),
+        postcode: toCleanStr(body?.postcode),
+        country_id: toNum(body?.country_id) ?? 100,
+        zone_id: toNum(body?.zone_id),
+        city_id: toNum(body?.city_id),
+        districts_id: toNum(body?.districts_id),
+        code_dest_id: toNum(body?.code_dest_id),
+        default: toNum(body?.default) ?? 0,
+    };
+};
+const validateAddressPayload = (payload) => {
+    const fieldErrors = {};
+    if (!payload.customer_id || payload.customer_id <= 0)
+        fieldErrors.customer_id = "customer_id wajib diisi";
+    if (!payload.firstname)
+        fieldErrors.firstname = "Nama depan wajib diisi";
+    if (!payload.lastname)
+        fieldErrors.lastname = "Nama belakang wajib diisi";
+    if (!payload.telephone)
+        fieldErrors.telephone = "Telepon wajib diisi";
+    if (!payload.address_1)
+        fieldErrors.address_1 = "Alamat wajib diisi";
+    if (!payload.postcode)
+        fieldErrors.postcode = "Kode pos wajib diisi";
+    if (!payload.zone_id || payload.zone_id <= 0)
+        fieldErrors.zone_id = "Provinsi wajib dipilih";
+    if (!payload.city_id || payload.city_id <= 0)
+        fieldErrors.city_id = "Kota wajib dipilih";
+    if (!payload.districts_id || payload.districts_id <= 0)
+        fieldErrors.districts_id = "Kecamatan wajib dipilih";
+    if (!payload.code_dest_id || payload.code_dest_id <= 0)
+        fieldErrors.code_dest_id = "Kelurahan wajib dipilih";
+    return fieldErrors;
+};
 export const getAddress = async (req, res) => {
     const customer_id = toNum(req.query.customer_id || req.params.customer_id);
     const address_id = toNum(req.query.address_id || req.params.address_id);
     if (!customer_id)
-        return errorResponse(res, 'customer_id is required', 400);
+        return errorResponse(res, "customer_id is required", 400);
     try {
         const select = `
       SELECT 
@@ -75,24 +118,24 @@ export const getAddress = async (req, res) => {
           GROUP BY mst_wilayah_id
       ) s ON s.mst_wilayah_id = dw.mst_wilayah_id
     `;
-        let where = 'a.customer_id = ?';
+        let where = "a.customer_id = ?";
         const params = [customer_id];
         if (address_id) {
-            where += ' AND a.address_id = ?';
+            where += " AND a.address_id = ?";
             params.push(address_id);
         }
         const query = `${select} WHERE ${where} ORDER BY a.default DESC`;
         const [rows] = await pool.query(query, params);
-        return successResponse(res, { addresses: rows }, 'Addresses retrieved successfully');
+        return successResponse(res, { addresses: rows }, "Addresses retrieved successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const getAddressWilayah = async (req, res) => {
     const city_id = toNum(req.query.city_id || req.params.city_id);
     if (!city_id)
-        return errorResponse(res, 'city_id is required', 400);
+        return errorResponse(res, "city_id is required", 400);
     try {
         const query = `
       SELECT dw.mst_wilayah_id, s.code_origin
@@ -101,60 +144,117 @@ export const getAddressWilayah = async (req, res) => {
       WHERE dw.city_id = ? AND dw.trash = 0
     `;
         const [rows] = await pool.query(query, [city_id]);
-        return successResponse(res, { wilayah: rows }, 'Wilayah retrieved successfully');
+        return successResponse(res, { wilayah: rows }, "Wilayah retrieved successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const saveAddress = async (req, res) => {
-    const data = req.body;
-    if (!data || !data.customer_id)
-        return errorResponse(res, 'customer_id is required in body', 400);
+    const payload = normalizeAddressPayload(req.body);
+    const fieldErrors = validateAddressPayload(payload);
+    if (Object.keys(fieldErrors).length > 0) {
+        return res.status(400).json({
+            success: false,
+            error: "Lengkapi semua field wajib alamat",
+            field_errors: fieldErrors,
+        });
+    }
     try {
-        const [result] = await pool.query('INSERT INTO sw_address SET ?', [data]);
-        return successResponse(res, { insertId: result.insertId }, 'Address saved successfully');
+        const sql = `
+      INSERT INTO sw_address
+      (customer_id, firstname, lastname, telephone, company, address_1, address_2, postcode, country_id, zone_id, city_id, districts_id, code_dest_id, \`default\`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+        const [result] = await pool.query(sql, [
+            payload.customer_id,
+            payload.firstname,
+            payload.lastname,
+            payload.telephone,
+            payload.company,
+            payload.address_1,
+            payload.address_2,
+            payload.postcode,
+            payload.country_id,
+            payload.zone_id,
+            payload.city_id,
+            payload.districts_id,
+            payload.code_dest_id,
+            payload.default,
+        ]);
+        return successResponse(res, { insertId: result.insertId }, "Address saved successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const updateAddress = async (req, res) => {
     const id = toNum(req.params.id || req.body.address_id);
-    const data = req.body;
+    const payload = normalizeAddressPayload(req.body);
     if (!id)
-        return errorResponse(res, 'address_id is required', 400);
+        return errorResponse(res, "address_id is required", 400);
+    const fieldErrors = validateAddressPayload(payload);
+    if (Object.keys(fieldErrors).length > 0) {
+        return res.status(400).json({
+            success: false,
+            error: "Lengkapi semua field wajib alamat",
+            field_errors: fieldErrors,
+        });
+    }
     try {
-        const [result] = await pool.query('UPDATE sw_address SET ? WHERE address_id = ?', [data, id]);
-        return successResponse(res, { affectedRows: result.affectedRows }, 'Address updated successfully');
+        const sql = `
+      UPDATE sw_address
+      SET customer_id = ?, firstname = ?, lastname = ?, telephone = ?, company = ?,
+          address_1 = ?, address_2 = ?, postcode = ?, country_id = ?, zone_id = ?,
+          city_id = ?, districts_id = ?, code_dest_id = ?, \`default\` = ?
+      WHERE address_id = ?
+    `;
+        const [result] = await pool.query(sql, [
+            payload.customer_id,
+            payload.firstname,
+            payload.lastname,
+            payload.telephone,
+            payload.company,
+            payload.address_1,
+            payload.address_2,
+            payload.postcode,
+            payload.country_id,
+            payload.zone_id,
+            payload.city_id,
+            payload.districts_id,
+            payload.code_dest_id,
+            payload.default,
+            id,
+        ]);
+        return successResponse(res, { affectedRows: result.affectedRows }, "Address updated successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const updateAddressDefault = async (req, res) => {
     const customer_id = toNum(req.params.customer_id || req.body.customer_id);
     const data = req.body;
     if (!customer_id)
-        return errorResponse(res, 'customer_id is required', 400);
+        return errorResponse(res, "customer_id is required", 400);
     try {
-        const [result] = await pool.query('UPDATE sw_address SET ? WHERE customer_id = ?', [data, customer_id]);
-        return successResponse(res, { affectedRows: result.affectedRows }, 'Default address updated successfully');
+        const [result] = await pool.query("UPDATE sw_address SET ? WHERE customer_id = ?", [data, customer_id]);
+        return successResponse(res, { affectedRows: result.affectedRows }, "Default address updated successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const deleteAddress = async (req, res) => {
     const id = toNum(req.params.id || req.body.address_id);
     if (!id)
-        return errorResponse(res, 'address_id is required', 400);
+        return errorResponse(res, "address_id is required", 400);
     try {
-        const [result] = await pool.query('DELETE FROM sw_address WHERE address_id = ?', [id]);
-        return successResponse(res, { affectedRows: result.affectedRows }, 'Address deleted successfully');
+        const [result] = await pool.query("DELETE FROM sw_address WHERE address_id = ?", [id]);
+        return successResponse(res, { affectedRows: result.affectedRows }, "Address deleted successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 // Kodepos
@@ -164,15 +264,15 @@ export const getKodepos = async (req, res) => {
         let query = `SELECT * FROM sw_code_dest WHERE trash = '0' AND status = '1'`;
         const params = [];
         if (code_dest_id) {
-            query += ' AND code_dest_id = ?';
+            query += " AND code_dest_id = ?";
             params.push(code_dest_id);
         }
-        query += ' ORDER BY code_dest_id ASC, subdistrict_name ASC';
+        query += " ORDER BY code_dest_id ASC, subdistrict_name ASC";
         const [rows] = await pool.query(query, params);
-        return successResponse(res, { kodepos: rows }, 'Kodepos retrieved successfully');
+        return successResponse(res, { kodepos: rows }, "Kodepos retrieved successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const getKelurahan = async (req, res) => {
@@ -181,15 +281,15 @@ export const getKelurahan = async (req, res) => {
         let query = `SELECT * FROM sw_code_dest WHERE trash = '0' AND status = '1'`;
         const params = [];
         if (district_id) {
-            query += ' AND districts_id = ?';
+            query += " AND districts_id = ?";
             params.push(district_id);
         }
-        query += ' ORDER BY code_dest_id ASC, subdistrict_name ASC';
+        query += " ORDER BY code_dest_id ASC, subdistrict_name ASC";
         const [rows] = await pool.query(query, params);
-        return successResponse(res, { kelurahan: rows }, 'Kelurahan retrieved successfully');
+        return successResponse(res, { kelurahan: rows }, "Kelurahan retrieved successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const getKecamatan = async (req, res) => {
@@ -198,15 +298,15 @@ export const getKecamatan = async (req, res) => {
         let query = `SELECT * FROM sw_districts WHERE trash = '0' AND status = '1'`;
         const params = [];
         if (city_id) {
-            query += ' AND city_id = ?';
+            query += " AND city_id = ?";
             params.push(city_id);
         }
-        query += ' ORDER BY districts_id ASC, name ASC';
+        query += " ORDER BY districts_id ASC, name ASC";
         const [rows] = await pool.query(query, params);
-        return successResponse(res, { kecamatan: rows }, 'Kecamatan retrieved successfully');
+        return successResponse(res, { kecamatan: rows }, "Kecamatan retrieved successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const getKota = async (req, res) => {
@@ -215,15 +315,15 @@ export const getKota = async (req, res) => {
         let query = `SELECT * FROM sw_city WHERE trash = '0' AND status = '1'`;
         const params = [];
         if (zone_id) {
-            query += ' AND zone_id = ?';
+            query += " AND zone_id = ?";
             params.push(zone_id);
         }
-        query += ' ORDER BY city_id ASC, name ASC';
+        query += " ORDER BY city_id ASC, name ASC";
         const [rows] = await pool.query(query, params);
-        return successResponse(res, { kota: rows }, 'Kota retrieved successfully');
+        return successResponse(res, { kota: rows }, "Kota retrieved successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const getPropinsi = async (req, res) => {
@@ -237,15 +337,15 @@ export const getPropinsi = async (req, res) => {
             params.push(zone_id, country_id);
         }
         else if (country_id) {
-            query += ' AND country_id = ?';
+            query += " AND country_id = ?";
             params.push(country_id);
         }
-        query += ' ORDER BY country_id ASC, name ASC';
+        query += " ORDER BY country_id ASC, name ASC";
         const [rows] = await pool.query(query, params);
-        return successResponse(res, { propinsi: rows }, 'Propinsi retrieved successfully');
+        return successResponse(res, { propinsi: rows }, "Propinsi retrieved successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const getCountry = async (req, res) => {
@@ -254,14 +354,14 @@ export const getCountry = async (req, res) => {
         let query = `SELECT * FROM sw_country WHERE trash = '0' AND status = '1'`;
         const params = [];
         if (country_id) {
-            query += ' AND country_id = ?';
+            query += " AND country_id = ?";
             params.push(country_id);
         }
-        query += ' ORDER BY name ASC';
+        query += " ORDER BY name ASC";
         const [rows] = await pool.query(query, params);
-        return successResponse(res, { countries: rows }, 'Countries retrieved successfully');
+        return successResponse(res, { countries: rows }, "Countries retrieved successfully");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };

@@ -22,6 +22,7 @@ import komisiRoutes from "./src/backend/routes/komisiRoutes.js";
 import konsultasiRoutes from "./src/backend/routes/konsultasiRoutes.js";
 import masterWilayahRoutes from "./src/backend/routes/masterWilayahRoutes.js";
 import midtransRoutes from "./src/backend/routes/midtransRoutes.js";
+import notificationRoutes from "./src/backend/routes/notificationRoutes.js";
 import ongkirRoutes from "./src/backend/routes/ongkirRoutes.js";
 import orderProductRoutes from "./src/backend/routes/orderProductRoutes.js";
 import orderRoutes from "./src/backend/routes/orderRoutes.js";
@@ -53,22 +54,25 @@ async function startServer() {
     return null;
   };
 
-  const imagesRoot = resolveExistingDir(path.join("src", "images"))
-    || resolveExistingDir("images")
-    || path.join(process.cwd(), "src", "images");
+  const imagesRoot = resolveExistingDir(path.join("src", "images")) || resolveExistingDir("images") || path.join(process.cwd(), "src", "images");
 
-  app.use(cors({
-    origin: (origin, callback) => {
-      if (process.env.NODE_ENV !== 'production') return callback(null, true);
-      if (!origin) return callback(null, true);
-      const allowed = (process.env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
-      if (allowed.length === 0 || allowed.includes(origin)) return callback(null, true);
-      return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-    allowedHeaders: ['Content-Type','Authorization','X-Requested-With','Accept']
-  }));
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (process.env.NODE_ENV !== "production") return callback(null, true);
+        if (!origin) return callback(null, true);
+        const allowed = (process.env.CORS_ORIGIN || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (allowed.length === 0 || allowed.includes(origin)) return callback(null, true);
+        return callback(new Error("Not allowed by CORS"));
+      },
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    }),
+  );
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -86,7 +90,7 @@ async function startServer() {
       fs.appendFileSync("access.log", logEntry);
       console.log(logEntry.trim());
     } catch (e) {
-      console.error('Failed to write access log:', e);
+      console.error("Failed to write access log:", e);
     }
     next();
   });
@@ -121,6 +125,7 @@ async function startServer() {
   app.use("/api", konsultasiRoutes);
   app.use("/api", masterWilayahRoutes);
   app.use("/api", midtransRoutes);
+  app.use("/api", notificationRoutes);
   app.use("/api", ongkirRoutes);
   app.use("/api", orderProductRoutes);
   app.use("/api", orderRoutes);
@@ -136,15 +141,15 @@ async function startServer() {
   app.use("/api", wishlistRoutes);
 
   // Static images (legacy-friendly)
-  app.use('/images', express.static(imagesRoot));
-  app.use('/slideshow', express.static(path.join(imagesRoot, 'slideshow')));
-  app.use('/produk', express.static(path.join(imagesRoot, 'produk')));
-  app.use('/banner', express.static(path.join(imagesRoot, 'banner')));
+  app.use("/images", express.static(imagesRoot));
+  app.use("/slideshow", express.static(path.join(imagesRoot, "slideshow")));
+  app.use("/produk", express.static(path.join(imagesRoot, "produk")));
+  app.use("/banner", express.static(path.join(imagesRoot, "banner")));
 
   console.log(`Static images root: ${imagesRoot}`);
 
   // Debug: list registered routes (including mounted routers)
-  app.get('/api/routes', (req, res) => {
+  app.get("/api/routes", (req, res) => {
     try {
       const routes: Array<any> = [];
       const stack: any[] = (app as any)._router?.stack || [];
@@ -155,8 +160,8 @@ async function startServer() {
           routes.push({ path: layer.route.path, methods: Object.keys(layer.route.methods).map((m: string) => m.toUpperCase()) });
         }
         // mounted routers
-        else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
-          const mountPath = layer.regexp && layer.regexp.source ? layer.regexp.source : '';
+        else if (layer.name === "router" && layer.handle && layer.handle.stack) {
+          const mountPath = layer.regexp && layer.regexp.source ? layer.regexp.source : "";
           layer.handle.stack.forEach((l: any) => {
             if (l.route && l.route.path) {
               routes.push({ path: `${mountPath}${l.route.path}`, methods: Object.keys(l.route.methods).map((m: string) => m.toUpperCase()) });
@@ -167,16 +172,16 @@ async function startServer() {
 
       return res.json({ routes });
     } catch (e: any) {
-      return res.status(500).json({ error: e.message || 'Failed to enumerate routes' });
+      return res.status(500).json({ error: e.message || "Failed to enumerate routes" });
     }
   });
 
   // 404 for API - Catch everything under /api that wasn't matched
   app.all("/api/*", (req, res) => {
-    res.status(404).json({ 
-      error: "API Route Not Found", 
+    res.status(404).json({
+      error: "API Route Not Found",
       method: req.method,
-      path: req.originalUrl
+      path: req.originalUrl,
     });
   });
 

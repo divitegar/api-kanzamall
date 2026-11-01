@@ -111,21 +111,27 @@ export const getProductDeals = async (req, res) => {
     const limit = req.query.limit || 4;
     const leaderFilter = resolveLeaderFilter(req);
     try {
-        const query = `
-      SELECT pd.name, cd.name as category_name, p.*
-      FROM sw_product p
-      LEFT JOIN sw_product_description pd ON pd.product_id = p.product_id
-      LEFT JOIN sw_category_description cd ON cd.category_id = p.category_id
-      WHERE p.trash = '0' 
-        AND p.status = 1 
-        AND p.deal = '1' 
-        AND p.dashboard = '0' 
-        AND p.leader = ?
-        AND (p.end_deal IS NULL OR p.end_deal >= NOW())
-      ORDER BY p.date_added ASC, p.product_id ASC
-      LIMIT ?
-    `;
-        const [rows] = await pool.query(query, [leaderFilter, Number(limit)]);
+        const runQuery = async (targetLeader) => {
+            const sql = `
+        SELECT pd.name, cd.name as category_name, p.*
+        FROM sw_product p
+        LEFT JOIN sw_product_description pd ON pd.product_id = p.product_id
+        LEFT JOIN sw_category_description cd ON cd.category_id = p.category_id
+        WHERE p.trash = '0' 
+          AND p.status = 1 
+          AND p.deal = '1' 
+          AND p.dashboard = '0' 
+          AND p.leader = ?
+        ORDER BY CASE WHEN p.end_deal IS NOT NULL AND p.end_deal >= NOW() THEN 0 ELSE 1 END, p.date_added DESC, p.product_id ASC
+        LIMIT ?
+      `;
+            const [results] = await pool.query(sql, [targetLeader, Number(limit)]);
+            return results;
+        };
+        let rows = await runQuery(leaderFilter);
+        if (rows.length === 0 && leaderFilter === 1) {
+            rows = await runQuery(0);
+        }
         return successResponse(res, { products: rows }, 'Product deals retrieved successfully');
     }
     catch (error) {

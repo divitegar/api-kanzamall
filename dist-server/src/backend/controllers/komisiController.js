@@ -1,6 +1,6 @@
-import pool from '../config/db.js';
-import { successResponse, errorResponse } from '../helpers/apiResponse.js';
-const toStr = (v) => v === undefined || v === null ? undefined : String(v);
+import pool from "../config/db.js";
+import { successResponse, errorResponse } from "../helpers/apiResponse.js";
+const toStr = (v) => (v === undefined || v === null ? undefined : String(v));
 export const searchKomisi = async (req, res) => {
     const { bulan1, tahun1, bulan2, tahun2, id, type_user } = req.query;
     const params = { bulan1: toStr(bulan1), tahun1: toStr(tahun1), bulan2: toStr(bulan2), tahun2: toStr(tahun2), id: toStr(id), type_user: toStr(type_user) };
@@ -20,24 +20,24 @@ export const searchKomisi = async (req, res) => {
             const periode1 = `${params.tahun1}${params.bulan1}`;
             const periode2 = `${params.tahun2}${params.bulan2}`;
             const [rows] = await pool.query(q, [params.id, periode1, periode2]);
-            return successResponse(res, { result: rows }, 'Komisi summary');
+            return successResponse(res, { result: rows }, "Komisi summary");
         }
         // fallback: simple filter by id and type_user
         let q2 = `SELECT * FROM sw_komisi WHERE 1=1`;
         const qParams = [];
         if (params.id) {
-            q2 += ' AND customer_id = ?';
+            q2 += " AND customer_id = ?";
             qParams.push(params.id);
         }
         if (params.type_user) {
-            q2 += ' AND type_user = ?';
+            q2 += " AND type_user = ?";
             qParams.push(params.type_user);
         }
         const [rows2] = await pool.query(q2, qParams);
-        return successResponse(res, { result: rows2 }, 'Komisi results');
+        return successResponse(res, { result: rows2 }, "Komisi results");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const getKomisiSummary = async (req, res) => {
@@ -55,7 +55,7 @@ export const getKomisiSummary = async (req, res) => {
         WHERE k.tanggal = DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
       `;
             const [rows] = await pool.query(q);
-            return successResponse(res, { result: rows }, 'Komisi summary');
+            return successResponse(res, { result: rows }, "Komisi summary");
         }
         // other filters
         let q2 = `SELECT * FROM sw_komisi WHERE 1=1`;
@@ -69,16 +69,16 @@ export const getKomisiSummary = async (req, res) => {
             params.push(bulan);
         }
         const [rows2] = await pool.query(q2, params);
-        return successResponse(res, { result: rows2 }, 'Komisi filtered');
+        return successResponse(res, { result: rows2 }, "Komisi filtered");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const getKomisiTotal = async (req, res) => {
     const customer_id = req.query.customer_id || req.params.customer_id || req.body?.customer_id;
     if (!customer_id) {
-        return errorResponse(res, 'customer_id is required', 400);
+        return errorResponse(res, "customer_id is required", 400);
     }
     try {
         const q = `
@@ -88,10 +88,10 @@ export const getKomisiTotal = async (req, res) => {
     `;
         const [rows] = await pool.query(q, [customer_id]);
         const total = rows[0]?.total_komisi || 0;
-        return successResponse(res, { total_komisi: Number(total) }, 'Total komisi retrieved');
+        return successResponse(res, { total_komisi: Number(total) }, "Total komisi retrieved");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };
 export const getKomisiDetail = async (req, res) => {
@@ -100,40 +100,40 @@ export const getKomisiDetail = async (req, res) => {
     const date_start = toStr(req.query.date_start);
     const date_end = toStr(req.query.date_end);
     const search = toStr(req.query.search);
-    const sort_by_raw = toStr(req.query.sort_by) || 'tanggal';
-    const sort_dir_raw = (toStr(req.query.sort_dir) || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
+    const sort_by_raw = toStr(req.query.sort_by) || "tanggal";
+    const sort_dir_raw = (toStr(req.query.sort_dir) || "desc").toLowerCase() === "asc" ? "ASC" : "DESC";
     const page = Math.max(1, Number(req.query.page || 1) || 1);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit || 10) || 10));
     const offset = (page - 1) * limit;
     if (!customer_id) {
-        return errorResponse(res, 'customer_id is required', 400);
+        return errorResponse(res, "customer_id is required", 400);
     }
     try {
         const sortableColumns = {
-            tanggal: 'k.tanggal',
-            nilai_komisi: 'k.nilai_komisi',
-            nilai_order: 'k.nilai_order',
-            invoice_no: 'o.invoice_no',
-            order_id: 'k.order_id',
-            name: 'k.name',
+            tanggal: "k.tanggal",
+            nilai_komisi: "k.nilai_komisi",
+            nilai_order: "k.nilai_order",
+            invoice_no: "o.invoice_no",
+            order_id: "k.order_id",
+            name: "k.name",
         };
         const sortColumn = sortableColumns[sort_by_raw] || sortableColumns.tanggal;
         let whereClause = ` WHERE k.customer_id = ? `;
         const params = [customer_id];
         if (order_id) {
-            whereClause += ' AND k.order_id = ?';
+            whereClause += " AND k.order_id = ?";
             params.push(order_id);
         }
         if (date_start) {
-            whereClause += ' AND DATE(k.tanggal) >= ?';
+            whereClause += " AND DATE(k.tanggal) >= ?";
             params.push(date_start);
         }
         if (date_end) {
-            whereClause += ' AND DATE(k.tanggal) <= ?';
+            whereClause += " AND DATE(k.tanggal) <= ?";
             params.push(date_end);
         }
         if (search) {
-            whereClause += ' AND (o.invoice_no LIKE ? OR k.name LIKE ? OR k.order_id LIKE ?)';
+            whereClause += " AND (o.invoice_no LIKE ? OR k.name LIKE ? OR k.order_id LIKE ?)";
             const keyword = `%${search}%`;
             params.push(keyword, keyword, keyword);
         }
@@ -167,16 +167,16 @@ export const getKomisiDetail = async (req, res) => {
             filters: {
                 date_start: date_start || null,
                 date_end: date_end || null,
-                search: search || '',
+                search: search || "",
                 sort_by: sort_by_raw,
                 sort_dir: sort_dir_raw.toLowerCase(),
             },
             summary: {
                 current_page_total_komisi: totalKomisi,
             },
-        }, 'Komisi detail retrieved');
+        }, "Komisi detail retrieved");
     }
     catch (err) {
-        return errorResponse(res, err.message || 'DB error', 500);
+        return errorResponse(res, err.message || "DB error", 500);
     }
 };

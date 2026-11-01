@@ -206,8 +206,10 @@ const saveCheckoutMultiStore = async (req, res) => {
     if (!stores.length) {
         return errorResponse(res, "stores is required", 400);
     }
-    if (!payload.customer_id) {
-        return errorResponse(res, "customer_id is required", 400);
+    const customerId = toSafeNum(payload.customer_id, 0);
+    payload.customer_id = customerId;
+    if (!payload.firstname || !payload.email || !payload.telephone) {
+        return errorResponse(res, "Nama, email, dan nomor telepon wajib diisi untuk membuat transaksi", 400);
     }
     const conn = await pool.getConnection();
     const now = new Date().toISOString().slice(0, 10);
