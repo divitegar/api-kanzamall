@@ -145,6 +145,12 @@ async function startServer() {
   app.use("/slideshow", express.static(path.join(imagesRoot, "slideshow")));
   app.use("/produk", express.static(path.join(imagesRoot, "produk")));
   app.use("/banner", express.static(path.join(imagesRoot, "banner")));
+  app.use("/images/artikel", express.static(path.join(imagesRoot, "articles")));
+  app.use("/artikel", express.static(path.join(imagesRoot, "articles")));
+  app.use("/images/point_reward", express.static(path.join(imagesRoot, "point_reward")));
+  app.use("/point_reward", express.static(path.join(imagesRoot, "point_reward")));
+  app.use("/images/user", express.static(path.join(imagesRoot, "user")));
+  app.use("/user", express.static(path.join(imagesRoot, "user")));
 
   console.log(`Static images root: ${imagesRoot}`);
 
